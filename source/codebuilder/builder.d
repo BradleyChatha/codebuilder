@@ -431,9 +431,11 @@ unittest
 }
 
 ///
-CodeBuilder addFuncCall(Params...)(CodeBuilder builder, dstring funcName, Params params)
+CodeBuilder addFuncCall(Flag!"semicolon" semicolon = Yes.semicolon, Params...)(CodeBuilder builder, dstring funcName, Params params)
 {
-    import std.range : isInputRange;
+    import std.conv   : to;
+    import std.range  : isInputRange;
+    import std.traits : isBuiltinType;
 
     builder.put(funcName, No.tabs, No.newLines);
     builder.disable();
@@ -444,11 +446,13 @@ CodeBuilder addFuncCall(Params...)(CodeBuilder builder, dstring funcName, Params
         alias PType = typeof(param);
 
         static if(is(PType : dstring) || isInputRange!PType)
-            builder.putString(param);
+            builder.put(param);
         else static if(is(PType == CodeFunc))
             param(builder);
         else static if(is(PType == Variable))
             builder.put(param.name);
+        else static if(isBuiltinType!PType)
+            builder.put(param.to!string);
         else
             static assert(false, "Unknown type: " ~ PType.stringof);
 
@@ -458,7 +462,10 @@ CodeBuilder addFuncCall(Params...)(CodeBuilder builder, dstring funcName, Params
 
     builder.enable();
     builder.put(')', No.tabs, No.newLines);
-    builder.put(';', No.tabs);
+
+    if(semicolon)
+        builder.put(';', No.tabs);
+
     return builder;
 }
 ///
@@ -466,10 +473,9 @@ unittest
 {
     auto builder = new CodeBuilder();
 
-    // DStrings(Including input ranges of them), CodeFuncs, and Variables can all be passed as parameters.
-    // Strings are automatically enclosed in speech marks.
+    // DStrings(Including input ranges of them), CodeFuncs, built-in types(int, bool, float, etc.), and Variables can all be passed as parameters.
     // The 'putString' function can be used to perform this as well
-    dstring  str  = "Hello"d;
+    dstring  str  = "\"Hello\""d;
     CodeFunc func = (b){b.putString("World!");};
     Variable vari = Variable("int", "someVar");
 

@@ -17,12 +17,27 @@ dstring genFunction()
     return builder.data.idup;
 }
 
+dstring genTest(int a, int b, int expected)
+{
+    auto builder = new CodeBuilder();
+
+    builder.addFuncCall("Assert.equal", 
+                        cast(CodeFunc)(CodeBuilder build)
+                            {build.addFuncCall!(No.semicolon)("sum", a, b);}, 
+                        expected);
+
+    return builder.data.idup;
+}
+
 unittest
 {
     import fluent.asserts;
 
     mixin(genFunction());
 
-    sum(20,   80).should.equal(100);
+    sum(20, 80).should.equal(100);
     sum(200, -100).should.equal(100);
+
+    mixin(genTest(50, 25, 75));
+    mixin(genTest(1, 1, 2));
 }
