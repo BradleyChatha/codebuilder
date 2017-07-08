@@ -343,6 +343,32 @@ unittest
 }
 
 ///
+Variable addAlias(CodeBuilder builder, dstring name, CodeFunc valueFunc)
+{
+    return builder.addVariable("alias", name, valueFunc);
+}
+///
+unittest
+{
+    auto builder = new CodeBuilder();
+    builder.addAlias("SomeType", (b){b.put("int");});
+    builder.data.should.equal("alias SomeType = int;\n");
+}
+
+///
+Variable addEnumValue(CodeBuilder builder, dstring name, CodeFunc valueFunc)
+{
+    return builder.addVariable("enum", name, valueFunc);
+}
+///
+unittest
+{
+    auto builder = new CodeBuilder();
+    builder.addEnumValue("SomeValue", (b){b.put("6");});
+    builder.data.should.equal("enum SomeValue = 6;\n");
+}
+
+///
 CodeBuilder addReturn(T)(CodeBuilder builder, T code)
 {
     dstring returnCode;
