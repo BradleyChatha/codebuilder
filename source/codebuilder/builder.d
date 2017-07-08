@@ -183,18 +183,39 @@ unittest
 }
 
 ///
+CodeBuilder putString(T)(CodeBuilder builder, T str)
+{
+    builder.disable();
+
+    builder.put('"');
+    builder.put(str);
+    builder.put('"');
+
+    builder.enable();
+    return builder;
+}
+///
+unittest
+{
+    auto builder = new CodeBuilder();
+
+    builder.put("Hello");
+    builder.putString("World!");
+
+    builder.data.should.equal("Hello\n\"World!\"");
+}
+
+///
 CodeBuilder addFuncDeclaration(CodeBuilder builder, dstring returnType, dstring name, Variable[] params, CodeFunc body_)
 {
+    import std.algorithm : map, joiner;
+
     builder.put(returnType ~ " " ~ name, Yes.tabs, No.newLines);
 
     builder.disable();
-    builder.put("(");
-    if(params !is null) // Do I even need this? Doubt it... Future me who isn't tired, do a 5 second check.
-    {
-        import std.algorithm : map, joiner;
-        builder.put(params.map  !(v => v.typeName ~ " " ~ v.name)
-                          .joiner(", "));
-    }
+    builder.put("(");        
+    builder.put(params.map!(v => v.typeName ~ " " ~ v.name)
+                        .joiner(", "));
     builder.enable();
     builder.put(")", No.tabs);
 
@@ -349,17 +370,14 @@ CodeBuilder addReturn(T)(CodeBuilder builder, T code)
         builder.enable();
 
         builder.put(";", No.tabs);
-
-        return builder;
     }
     else
         static assert(false, T.stringof);
 
     static if(UseReturnCode)
-    {
         builder.put("return " ~ returnCode ~ ";");
-        return builder;
-    }
+
+    return builder;
 }
 ///
 unittest
@@ -384,4 +402,52 @@ unittest
     CodeFunc func = (b){b.put("200 / someNumber");};
     builder.addReturn(func);
     builder.data.should.equal("return 200 / someNumber;\n");
+}
+
+///
+CodeBuilder addFuncCall(Params...)(CodeBuilder builder, dstring funcName, Params params)
+{
+    import std.range : isInputRange;
+
+    builder.put(funcName, No.tabs, No.newLines);
+    builder.disable();
+    builder.put('(');
+
+    foreach(i, param; params)
+    {
+        alias PType = typeof(param);
+
+        static if(is(PType : dstring) || isInputRange!PType)
+            builder.putString(param);
+        else static if(is(PType == CodeFunc))
+            param(builder);
+        else static if(is(PType == Variable))
+            builder.put(param.name);
+        else
+            static assert(false, "Unknown type: " ~ PType.stringof);
+
+        static if(i != params.length - 1)
+            builder.put(", ");
+    }
+
+    builder.enable();
+    builder.put(')', No.tabs, No.newLines);
+    builder.put(';', No.tabs);
+    return builder;
+}
+///
+unittest
+{
+    auto builder = new CodeBuilder();
+
+    // DStrings(Including input ranges of them), CodeFuncs, and Variables can all be passed as parameters.
+    // Strings are automatically enclosed in speech marks.
+    // The 'putString' function can be used to perform this as well
+    dstring  str  = "Hello"d;
+    CodeFunc func = (b){b.putString("World!");};
+    Variable vari = Variable("int", "someVar");
+
+    builder.addFuncCall("writeln", str, func, vari);
+
+    builder.data.should.equal("writeln(\"Hello\", \"World!\", someVar);\n");
 }
