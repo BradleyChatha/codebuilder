@@ -151,7 +151,7 @@ final class CodeBuilder
         {
             import std.array;
             import std.algorithm : map;
-            import std.range     : repeat, isInputRange, chain, ElementEncodingType;
+            import std.range     : repeat, isInputRange, chain, ElementEncodingType, take;
 
             // For now, I'm just going to rely on the compiler's error message for when
             // the user passes something that Appender doesn't like.
@@ -162,25 +162,12 @@ final class CodeBuilder
             if(this._disableTabCount > 0)
                 doTabs = No.tabs;
 
-            auto tabs = this._tabChar.repeat(this._tabs);
+            auto tabs = this._tabChar.repeat((doTabs) ? this._tabs : 0);
+            auto line = ['\n'].take((doLines) ? 1 : 0);
 
             static if(isInputRange!T && is(ElementEncodingType!T : dchar[])) // ranges of dchar[]
             {
-                if(doTabs)
-                {
-                    dchar[] newLine;
-                    if(doLines)
-                        newLine = ['\n'];
-
-                    this._data.put(data.map!(str => chain(tabs, str, newLine)));
-                }
-                else
-                {
-                    this._data.put(data);
-
-                    if(doLines)
-                        this._data.put('\n');
-                }
+                this._data.put(data.map!(str => chain(tabs, str, newLine)));
             }
             else // dstring/ranges of dchar
             {
