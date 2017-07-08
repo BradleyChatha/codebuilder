@@ -385,7 +385,7 @@ CodeBuilder addReturn(T)(CodeBuilder builder, T code)
 
         returnCode = code.name;
     }
-    else static if(is(T == CodeFunc))
+    else static if(is(T : CodeFunc))
     {
         enum UseReturnCode = false;
 
@@ -447,7 +447,7 @@ CodeBuilder addFuncCall(Flag!"semicolon" semicolon = Yes.semicolon, Params...)(C
 
         static if(is(PType : dstring) || isInputRange!PType)
             builder.put(param);
-        else static if(is(PType == CodeFunc))
+        else static if(is(PType : CodeFunc))
             param(builder);
         else static if(is(PType == Variable))
             builder.put(param.name);

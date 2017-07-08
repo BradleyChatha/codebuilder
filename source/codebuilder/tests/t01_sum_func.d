@@ -22,7 +22,7 @@ dstring genTest(int a, int b, int expected)
     auto builder = new CodeBuilder();
 
     builder.addFuncCall("Assert.equal", 
-                        cast(CodeFunc)(CodeBuilder build)
+                        (CodeBuilder build)
                             {build.addFuncCall!(No.semicolon)("sum", a, b);}, 
                         expected);
 
