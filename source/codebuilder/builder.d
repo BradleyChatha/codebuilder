@@ -5,16 +5,25 @@ version(unittest) import fluent.asserts;
 
 public import std.typecons : Flag, Yes, No;
 
-///
+/// Passed to functions such as `CodeBuilder.put` to control automatic tabbing.
 alias UseTabs = Flag!"tabs";
 
-///
+/// Passed to functions such as `CodeBuilder.put` to control automatic new lines.
 alias UseNewLines = Flag!"newLines";
 
-///
+/// A delegate that can be passed to functions such as `addFuncDeclaration` to allow flexible
+/// generation of code.
 alias CodeFunc = void delegate(CodeBuilder);
 
-///
+/++
+ + A glorified wrapper around an `Appender` which supports automatic tabbing and new lines.
+ +
+ + On it's own, `CodeBuilder` may already be more desirable than manually formatting, tabbing new lining, 
+ + a code string manually.
+ +
+ + UFCS can also be used to create functions that can ease the generation of code, such as `addFuncCall`,
+ + `addFuncDeclaration`, `addReturn`, etc.
+ ++/
 final class CodeBuilder
 {
     import std.array : Appender;
@@ -31,7 +40,13 @@ final class CodeBuilder
 
     public
     {
-        ///
+        /++
+         + Increases the tab count, meaning anytime `CodeBuilder.put` is used an extra tab will be written before
+         + the data passed to it.
+         +
+         + Notes:
+         +  If the tab count is the same value as `size_t.max` then this function does nothing.
+         + ++/
         @safe @nogc
         void entab() nothrow pure
         {
@@ -42,7 +57,12 @@ final class CodeBuilder
             this._tabs += 1;
         }
 
-        ///
+        /++
+         + Decreases the tab count.
+         +
+         + Notes:
+         +  If the tab count is 0 then this function does nothing.
+         + ++/
         @safe @nogc
         void detab() nothrow pure
         {
@@ -53,7 +73,22 @@ final class CodeBuilder
             this._tabs -= 1;
         }
 
-        ///
+        /++
+         + Disables automatic tabbing and/or new line insertion.
+         +
+         + Notes:
+         +  For every call to `disable`, a call to `enable` is required to re-enable the functionality.
+         +
+         +  For example, if 2 calls to `disable` are made to disable tabbing, then 2 calls to `enable` for tabbing must be made
+         +  before tabbing is re-enabled.
+         +
+         + Params:
+         +  disableTabs  = If `Yes.tabs` then automatic tabbing will be disabled.
+         +  disableLines = If `Yes.newLines` then automatic new line insertion will be disabled.
+         +
+         + See_Also:
+         +  `CodeBuilder.enable`
+         + ++/
         @safe @nogc
         void disable(UseTabs disableTabs = Yes.tabs, UseNewLines disableLines = Yes.newLines) nothrow pure
         {
@@ -69,7 +104,16 @@ final class CodeBuilder
             _disable(this._disableTabCount,   disableTabs);
         }
 
-        ///
+        /++
+         + Enables automatic tabbing and/or new line insertion.
+         +
+         + Params:
+         +  enableTabs  = If `Yes.tabs` then automatic tabbing will be enabled.
+         +  enableLines = If `Yes.newLines` then automatic new line insertion will be enabled.
+         +
+         + See_Also:
+         +  `CodeBuilder.disable`
+         + ++/
         @safe @nogc
         void enable(UseTabs enableTabs = Yes.tabs, UseNewLines enableLines = Yes.newLines) nothrow pure
         {
@@ -85,7 +129,24 @@ final class CodeBuilder
             _enable(this._disableTabCount,   enableTabs);
         }
 
-        ///
+        /++
+         + Inserts data into the code string.
+         +
+         + Notes:
+         +  `T` can be anything supported by `Appender!(dchar[])`
+         +
+         +  `CodeBuilder.enable` and `CodeBuilder.disable` are used to enable/disable the functionality of
+         +  `doTabs` and `doLines` regardless of their values.
+         +
+         +   For ranges of `dchar[]` (such as `dchar[][]`) the functionality of `doTabs` and `doLines` will be applied to each
+         +   `dchar[]` given.
+         +
+         + Params:
+         +  data    = The data to insert.
+         +  doTabs  = If `Yes.tabs` then a certain amount of tabs (see `CodeBuilder.entab`) will be inserted
+         +            before `data` is inserted.
+         +  doLines = If `Yes.newLines` then a new line will be inserted after `data`.
+         + ++/
         void put(T)(T data, UseTabs doTabs = Yes.tabs, UseNewLines doLines = Yes.newLines)
         {
             import std.array;
@@ -103,7 +164,7 @@ final class CodeBuilder
 
             auto tabs = this._tabChar.repeat(this._tabs);
 
-            static if(isInputRange!T && is(ElementEncodingType!T : dchar[]))
+            static if(isInputRange!T && is(ElementEncodingType!T : dchar[])) // ranges of dchar[]
             {
                 if(doTabs)
                 {
@@ -121,7 +182,7 @@ final class CodeBuilder
                         this._data.put('\n');
                 }
             }
-            else
+            else // dstring/ranges of dchar
             {
                 if(doTabs)
                     this._data.put(tabs);
@@ -133,13 +194,16 @@ final class CodeBuilder
             }
         }
 
-        ///
+        /// overload ~=
         void opOpAssign(string op : "~", T)(T data)
         {
             this.put(data);
         }
 
-        ///
+        /++
+         + Returns:
+         +  The code currently generated.
+         + ++/
         @property @safe @nogc
         const(dchar)[] data() nothrow pure const
         {
