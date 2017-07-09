@@ -299,6 +299,24 @@ unittest
     builder.data.should.equal("{\n\twriteln(\"Hello world!\");\n}\n");
 }
 
+///
+CodeBuilder putf(Params...)(CodeBuilder builder, dstring formatStr, Params params)
+{
+    import std.format : format;
+
+    builder.put(format(formatStr, params));
+
+    return builder;
+}
+///
+unittest
+{
+    auto builder = new CodeBuilder();
+    builder.putf("if(%s == %s)", "\"Hello\"", "\"World\"");
+
+    builder.data.should.equal("if(\"Hello\" == \"World\")\n");
+}
+
 /++
  + Creates a function using the given data.
  +
