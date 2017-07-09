@@ -199,20 +199,29 @@ final class CodeBuilder
     }
 }
 
-///
+/// Describes a variable.
 struct Variable
 {
-    ///
+    /// The name of the variable's type.
     dstring typeName;
 
-    ///
+    /// The name of the variable.
     dstring name;
 
-    ///
+    /// The `CodeFunc` which generates the default value of the variable.
     CodeFunc defaultValue;
 }
 
-///
+/++
+ + A helper function that entabs the given `CodeBuilder`, calls a delegate to generate some code, and then detabs the `CodeBuilder`.
+ +
+ + Params:
+ +  builder = The `CodeBuilder` to use.
+ +  code    = The `CodeFunc` to use.
+ +
+ + Returns:
+ +  `builder`
+ + ++/
 CodeBuilder putEntabbed(CodeBuilder builder, CodeFunc code)
 {
     builder.entab();
@@ -233,7 +242,19 @@ unittest
     builder.data.should.equal("Hello\n\tWorld\n");
 }
 
-///
+/++
+ + A helper function to write the given code in between two '"'s
+ +
+ + Notes:
+ +  `T` can be any type that can be passed to `CodeBuilder.put`.
+ +
+ + Params:
+ +  builder = The `CodeBuilder` to use.
+ +  str     = The code to write.
+ +
+ + Returns:
+ +  `builder`
+ + ++/
 CodeBuilder putString(T)(CodeBuilder builder, T str)
 {
     builder.disable();
@@ -256,7 +277,19 @@ unittest
     builder.data.should.equal("Hello\n\"World!\"");
 }
 
-///
+/++
+ + Creates a function using the given data.
+ +
+ + Params:
+ +  builder     = The `CodeBuilder` to use.
+ +  returnType  = The name of the type that the function returns.
+ +  name        = The name of the function.
+ +  params      = The function's parameters.
+ +  body_       = The `CodeFunc` which generates the code for the function's body.
+ +
+ + Returns:
+ +  `builder`
+ + ++/
 CodeBuilder addFuncDeclaration(CodeBuilder builder, dstring returnType, dstring name, Variable[] params, CodeFunc body_)
 {
     import std.algorithm : map, joiner;
@@ -285,7 +318,20 @@ unittest
     builder.data.should.equal("int sum(int a, int b)\n{\n\treturn a + b;\n}\n");
 }
 
-///
+/++
+ + Creates a function using the given data.
+ +
+ + Params:
+ +  returnType  = The type that the function return.
+ +
+ +  builder     = The `CodeBuilder` to use.
+ +  name        = The name of the function.
+ +  params      = The function's parameters.
+ +  body_       = The `CodeFunc` which generates the code for the function's body.
+ +
+ + Returns:
+ +  `builder`
+ + ++/
 CodeBuilder addFuncDeclaration(returnType)(CodeBuilder builder, dstring name, Variable[] params, CodeFunc body_)
 {
     import std.traits : fullyQualifiedName;
@@ -302,7 +348,21 @@ unittest
     builder.data.should.equal("int six()\n{\n\treturn 6;\n}\n");
 }
 
-///
+/++
+ + Creates an import statement.
+ +
+ + Notes:
+ +  If `selection` is `null`, then the entire module is imported.
+ +  Otherwise, only the specified symbols are imported.
+ +
+ + Params:
+ +  builder = The `CodeBuilder` to use.
+ +  moduleName = The name of the module to import.
+ +  selection = An array of which symbols to import from the module.
+ +
+ + Returns:
+ +  `builder`
+ + ++/
 CodeBuilder addImport(CodeBuilder builder, dstring moduleName, dstring[] selection = null)
 {
     builder.put("import " ~ moduleName, Yes.tabs, No.newLines);
@@ -338,7 +398,21 @@ unittest
     builder.data.should.equal("import std.stdio : readln, writeln;\n");
 }
 
-///
+/++
+ + Declares a variable, and returns a `Variable` which can be used to easily reference the variable.
+ +
+ + Notes:
+ +  `valueFunc` may be `null`.
+ +
+ + Params:
+ +  builder   = The `CodeBuilder` to use.
+ +  type      = The name of the variable's type.
+ +  name      = The name of the variable.
+ +  valueFunc = The `CodeFunc` which generates the code to set the variable's intial value.
+ +
+ + Returns:
+ +  A `Variable` describing the variable declared by this function.
+ + ++/
 Variable addVariable(CodeBuilder builder, dstring type, dstring name, CodeFunc valueFunc = null)
 {
     builder.put(type ~ " " ~ name, Yes.tabs, No.newLines);
@@ -377,7 +451,7 @@ unittest
     six.should.equal(Variable("int", "six", func));
 }
 
-///
+/// A helper function to more easily specify the variable's type.
 Variable addVariable(T)(CodeBuilder builder, dstring name, CodeFunc valueFunc = null)
 {
     import std.traits : fullyQualifiedName;
@@ -393,7 +467,7 @@ unittest
     builder.data.should.equal("int six = 6;\n");
 }
 
-///
+/// A helper function for `addVariable` which creates an alias.
 Variable addAlias(CodeBuilder builder, dstring name, CodeFunc valueFunc)
 {
     return builder.addVariable("alias", name, valueFunc);
@@ -406,7 +480,7 @@ unittest
     builder.data.should.equal("alias SomeType = int;\n");
 }
 
-///
+/// A helper function for `addVariable` which creates an enum value.
 Variable addEnumValue(CodeBuilder builder, dstring name, CodeFunc valueFunc)
 {
     return builder.addVariable("enum", name, valueFunc);
@@ -419,7 +493,23 @@ unittest
     builder.data.should.equal("enum SomeValue = 6;\n");
 }
 
-///
+/++
+ + Creates a return statement.
+ +
+ + Notes:
+ +  If `T` is a `dstring`, then it is simply inserted in-place.
+ +
+ +  If `T` is a `Variable`, then the variable's name is inserted.
+ +
+ +  If `T` is a `CodeFunc`, then it's code will be generated between the `return` keyword and the ending `;`.
+ +
+ + Params:
+ +  builder = The `CodeBuilder` to use.
+ +  code    = The code to use in the return statement.
+ +
+ + Returns:
+ +  `builder`
+ + ++/
 CodeBuilder addReturn(T)(CodeBuilder builder, T code)
 {
     dstring returnCode;
@@ -481,7 +571,23 @@ unittest
     builder.data.should.equal("return 200 / someNumber;\n");
 }
 
-///
+/++
+ + Creates a call to a function.
+ +
+ + Notes:
+ +  `params` can be made up of any number of, `dstring`s, InputRanges, `CodeFunc`s, `Variables`,
+ +   and built-in D types.
+ +
+ + Params:
+ +  semicolon = If `Yes.semicolon`, then a ';' is inserted at the end of the function call.
+ +
+ +  builder  = The `CodeBuilder` to use.
+ +  funcName = The name of the function to call.
+ +  params   = The parameters to pass to the function.
+ +
+ + Returns:
+ +  `builder`
+ + ++/
 CodeBuilder addFuncCall(Flag!"semicolon" semicolon = Yes.semicolon, Params...)(CodeBuilder builder, dstring funcName, Params params)
 {
     import std.conv   : to;
