@@ -277,6 +277,28 @@ unittest
     builder.data.should.equal("Hello\n\"World!\"");
 }
 
+///
+CodeBuilder putScope(CodeBuilder builder, CodeFunc func)
+{
+    builder.put('{');
+    builder.putEntabbed((b){func(b);});
+    builder.put('}');
+
+    return builder;
+}
+///
+unittest
+{
+    auto builder = new CodeBuilder();
+    builder.putScope(
+        (b)
+        {
+            b.addFuncCall("writeln", "\"Hello world!\"");
+        });
+
+    builder.data.should.equal("{\n\twriteln(\"Hello world!\");\n}\n");
+}
+
 /++
  + Creates a function using the given data.
  +
@@ -594,7 +616,7 @@ CodeBuilder addFuncCall(Flag!"semicolon" semicolon = Yes.semicolon, Params...)(C
     import std.range  : isInputRange;
     import std.traits : isBuiltinType;
 
-    builder.put(funcName, No.tabs, No.newLines);
+    builder.put(funcName, Yes.tabs, No.newLines);
     builder.disable();
     builder.put('(');
 
