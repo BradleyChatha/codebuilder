@@ -281,7 +281,7 @@ unittest
 CodeBuilder putScope(CodeBuilder builder, CodeFunc func)
 {
     builder.put('{');
-    builder.putEntabbed((b){func(b);});
+    builder.putEntabbed(b => func(b));
     builder.put('}');
 
     return builder;
@@ -325,9 +325,7 @@ CodeBuilder addFuncDeclaration(CodeBuilder builder, dstring returnType, dstring 
     builder.enable();
     builder.put(")", No.tabs);
 
-    builder.put('{');
-    builder.putEntabbed(b => body_(b));
-    builder.put('}');
+    builder.putScope(body_);
     return builder;
 }
 ///
