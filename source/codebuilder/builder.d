@@ -167,17 +167,13 @@ final class CodeBuilder
 
             static if(isInputRange!T && is(ElementEncodingType!T : dchar[])) // ranges of dchar[]
             {
-                this._data.put(data.map!(str => chain(tabs, str, newLine)));
+                this._data.put(data.map!(str => chain(tabs, str, line)));
             }
             else // dstring/ranges of dchar
             {
-                if(doTabs)
-                    this._data.put(tabs);
-
+                this._data.put(tabs);
                 this._data.put(data);
-
-                if(doLines)
-                    this._data.put('\n');
+                this._data.put(line);
             }
         }
 
