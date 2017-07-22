@@ -609,11 +609,7 @@ unittest
  + Creates a return statement.
  +
  + Notes:
- +  If `T` is a `dstring`, then it is simply inserted in-place.
- +
- +  If `T` is a `Variable`, then the variable's name is inserted.
- +
- +  If `T` is a `CodeFunc`, then it's code will be generated between the `return` keyword and the ending `;`.
+ +  `T` can be any type supported by `putExtended`.
  +
  + Params:
  +  builder = The `CodeBuilder` to use.
@@ -624,37 +620,13 @@ unittest
  + ++/
 CodeBuilder addReturn(T)(CodeBuilder builder, T code)
 {
-    dstring returnCode;
+    builder.put("return ", Yes.tabs, No.newLines);
+    builder.disable();
 
-    static if(is(T : dstring))
-    {
-        enum UseReturnCode = true;
+    builder.putExtended(code);
 
-        returnCode = code;
-    }
-    else static if(is(T == Variable))
-    {
-        enum UseReturnCode = true;
-
-        returnCode = code.name;
-    }
-    else static if(is(T : CodeFunc))
-    {
-        enum UseReturnCode = false;
-
-        builder.put("return ", Yes.tabs, No.newLines);
-        
-        builder.disable();
-        code(builder);
-        builder.enable();
-
-        builder.put(";", No.tabs);
-    }
-    else
-        static assert(false, T.stringof);
-
-    static if(UseReturnCode)
-        builder.put("return " ~ returnCode ~ ";");
+    builder.enable();
+    builder.put(";", No.tabs, Yes.newLines);
 
     return builder;
 }
@@ -687,8 +659,9 @@ unittest
  + Creates a call to a function.
  +
  + Notes:
- +  `params` can be made up of any number of, `dstring`s, InputRanges, `CodeFunc`s, `Variables`,
- +   and built-in D types.
+ +  `params` can be made up of any combination of values supported by `putExtended`.
+ +
+ +  Strings $(B won't) be automatically enclosed between speech marks('"').
  +
  + Params:
  +  semicolon = If `Yes.semicolon`, then a ';' is inserted at the end of the function call.
@@ -712,18 +685,7 @@ CodeBuilder addFuncCall(Flag!"semicolon" semicolon = Yes.semicolon, Params...)(C
 
     foreach(i, param; params)
     {
-        alias PType = typeof(param);
-
-        static if(is(PType : dstring) || isInputRange!PType)
-            builder.put(param);
-        else static if(is(PType : CodeFunc))
-            param(builder);
-        else static if(is(PType == Variable))
-            builder.put(param.name);
-        else static if(isBuiltinType!PType)
-            builder.put(param.to!string);
-        else
-            static assert(false, "Unknown type: " ~ PType.stringof);
+        builder.putExtended(param);
 
         static if(i != params.length - 1)
             builder.put(", ");
@@ -732,7 +694,7 @@ CodeBuilder addFuncCall(Flag!"semicolon" semicolon = Yes.semicolon, Params...)(C
     builder.enable();
     builder.put(')', No.tabs, No.newLines);
 
-    if(semicolon)
+    static if(semicolon)
         builder.put(';', No.tabs);
 
     return builder;
@@ -743,7 +705,6 @@ unittest
     auto builder = new CodeBuilder();
 
     // DStrings(Including input ranges of them), CodeFuncs, built-in types(int, bool, float, etc.), and Variables can all be passed as parameters.
-    // The 'putString' function can be used to perform this as well
     dstring  str  = "\"Hello\""d;
     CodeFunc func = (b){b.putString("World!");};
     Variable vari = Variable("int", "someVar");
