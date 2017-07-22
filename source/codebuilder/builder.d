@@ -277,7 +277,9 @@ unittest
     builder.data.should.equal("Hello\n\"World!\"");
 }
 
-///
+/++
+ +
+ + ++/
 CodeBuilder putScope(CodeBuilder builder, CodeFunc func)
 {
     builder.put('{');
@@ -299,7 +301,17 @@ unittest
     builder.data.should.equal("{\n\twriteln(\"Hello world!\");\n}\n");
 }
 
-///
+/++
+ + Formatted version of `CodeBuilder.put`.
+ +
+ + Params:
+ +  builder   = The `CodeBuilder` to use.
+ +  formatStr = The format string to pass to `std.format.format`
+ +  params    = The paramters to pass to `std.format.format`
+ +
+ + Returns:
+ +  `builder`
+ + ++/
 CodeBuilder putf(Params...)(CodeBuilder builder, dstring formatStr, Params params)
 {
     import std.format : format;
@@ -315,6 +327,68 @@ unittest
     builder.putf("if(%s == %s)", "\"Hello\"", "\"World\"");
 
     builder.data.should.equal("if(\"Hello\" == \"World\")\n");
+}
+
+/++
+ + A helper function which accepts a wide variety of parameters to pass to `CodeBuilder.put`.
+ +
+ + Supported_Types:
+ +  InputRanges of characters (dstring, for example) - Written in as-is, with no modification.
+ +
+ +  `CodeFunc` - The `CodeFunc` is called with `builder` as it's parameter.
+ +
+ +  `Variable` - The name of the variable is written.
+ +
+ +  Any built-in D type - The result of passing the parameter to `std.conv.to!string` is written.
+ +
+ + Params:
+ +  builder = The `CodeBuilder` to use.
+ +  param   = The parameter to put.
+ +
+ + Returns:
+ +  `builder`
+ + ++/
+CodeBuilder putExtended(T)(CodeBuilder builder, T param)
+{
+    import std.range  : isInputRange;
+    import std.conv   : to;
+    import std.traits : isBuiltinType, isSomeFunction;
+
+    alias PType = T;
+
+    static if(is(PType : dstring) || isInputRange!PType)
+        builder.put(param);
+    else static if(is(PType : CodeFunc))
+        param(builder);
+    else static if(is(PType == Variable))
+        builder.put(param.name);
+    else static if(isBuiltinType!PType)
+        builder.put(param.to!dstring);
+    else static if(isSomeFunction!PType) // CodeFunc desctibes a delegate, so for functions we need to turn them into delegates first.
+    {
+        import std.functional : toDelegate;
+
+        auto del = param.toDelegate;
+        static assert(is(typeof(del) : CodeFunc), "Function of type '" ~ PType.stringof ~ "' is not convertable to a CodeFunc");
+
+        builder.putExtended(del);
+    }
+    else
+        static assert(false, "Unsupported type: " ~ PType.stringof);
+
+    return builder;
+}
+///
+unittest
+{
+    auto builder = new CodeBuilder();
+
+    builder.putExtended("Hello"d)                           // strings
+           .putExtended((CodeBuilder b) => b.put("World!")) // CodeFuncs
+           .putExtended(Variable("int", "myVar", null))     // Variables (only their names are written)
+           .putExtended(true);                              // Built-in D types (bools, ints, floats, etc.)
+
+    builder.data.should.equal("Hello\nWorld!\nmyVar\ntrue\n"d);
 }
 
 /++
