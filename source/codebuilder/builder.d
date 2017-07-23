@@ -167,6 +167,7 @@ final class CodeBuilder
 
             static if(isInputRange!T && is(ElementEncodingType!T : dchar[])) // ranges of dchar[]
             {
+                // TODO: Actually bother to test this. `chain` wouldn't work in the else statement, so possibly won't work here.
                 this._data.put(data.map!(str => chain(tabs, str, line)));
             }
             else // dstring/ranges of dchar
