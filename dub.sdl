@@ -1,7 +1,7 @@
 name "codebuilder"
 description "A library to help with generating code at compile time."
-authors "Sealab"
-copyright "Copyright © 2017, Sealab"
+authors "SealabJaster"
+copyright "Copyright © 2017, SealabJaster"
 license "MIT"
 
 targetPath "bin"
